@@ -1,0 +1,249 @@
+assignment3.awk
+awk '
+BEGIN{
+	#variables
+	userN[0]="";
+	prevR=""
+	currentR="";
+	minSec=0;
+	maxSec=0;
+	numUsers=0;
+	userNFound=0;
+	totalFiles=0;
+	countAllFiles[0]=0
+	countHidFiles[0]=0
+	countDirectories[0]=0;
+	userStorage[0]=0;	
+	old="test"
+	new="test"
+	flag=0;
+}
+/./ && NF > 2 {
+#go through each record from the ls output
+userNFound=0;
+changeS=0;
+changeL=0;
+
+#read the date
+    year=$6
+    month=substr($7,2)
+    day=substr($8,2)
+    hr=substr($9,1,2)
+    min=substr($9,4,2)
+    sec=substr($9,7)
+
+#create all the arrays
+if (NR == 1)
+{
+userN[0]=$3
+countHidFiles[$3]=0;
+countAllFiles[$3]=0;
+countDirectories[$3]=0;
+userOthers[$3]=0;
+countStorage[$3]=0;
+numUsers=1;
+}
+
+#get the oldest/newest file only for the regular files
+if ($1 ~ /^-/ && flag == 0)
+{
+old = $0
+new = $0
+
+ayear = byear=$6
+smonth = lmonth=substr($7,2)
+sday = lday=substr($8,2)
+shr = lhr=substr($9,1,2)
+smin = lmin=substr($9,4,2)
+ssec = lsec=substr($9,7)
+flag =1;
+}
+
+#store the user names in userN array
+for(i=0;i<numUsers;i++)
+{
+if(userN[i] == $3)
+{
+userNFound=1;
+break;
+}
+}
+
+#init the respective users array details on files count, dir count, storage size
+if(userNFound==0)
+{
+    userN[numUsers]=$3
+    countHidFiles[$3]=0;
+    countAllFiles[$3]=0;
+    countDirectories[$3]=0;
+    userOthers[$3]=0;
+    countStorage[$3]=0;
+    numUsers++;
+}
+
+#collect details for the regular files
+if ($1 ~ /^-/)
+{
+countStorage[$3] = countStorage[$3] + $5
+if ($10 ~ /^\./)
+{
+countHidFiles[$3] = countHidFiles[$3] + 1
+}
+else
+{
+countAllFiles[$3] = countAllFiles[$3] + 1
+}
+
+#check the time stamps to get the oldest file
+if(ayear >= year)
+{
+if(ayear != year)
+changeS=1;
+else if (smonth >= month)
+{
+if(smonth != month)
+changeS=1;
+else if (sday >= day)
+{
+if(sday != day)
+changeS=1;
+else if (shr >= hr)
+{
+if(shr != hr)
+changeS=1;
+else if (smin >= min)
+{
+if(smin != min)
+changeS=1;
+else if (ssec >= sec)
+{
+if(ssec != sec)
+changeS=1;
+}
+}
+}
+}
+}
+}
+#if changeS is 1, then we update the oldest file
+if (changeS == 1)
+{
+old=$0
+ayear=$6
+smonth=substr($7,2)
+sday=substr($8,2)
+shr=substr($9,1,2)
+smin=substr($9,4,2)
+ssec=substr($9,7)
+changeS=0;
+}
+
+#check the time stamps to get the newest file
+if(byear <= year)
+{
+if(byear != year)
+changeL=1;
+else if (lmonth <= month)
+{
+if(lmonth != month)
+changeL=1;
+else if (lday <= day)
+{
+if(lday <= day)
+changeL=1;
+else if (lhr <= hr)
+{
+if(lhr != hr)
+changeL=1;
+else if (lmin <= min)
+{
+if(lmin != min)
+changeL=1;
+else if (lsec <= sec)
+{
+if(lsec != sec)
+changeL=1;
+}
+}
+}
+}
+}
+}
+
+#if changeL is 1, then we update the oldest file
+if (changeL == 1)
+{
+new=$0
+byear=$6
+lmonth=substr($7,2)
+lday=substr($8,2)
+lhr=substr($9,1,2)
+lmin=substr($9,4,2)
+lsec=substr($9,7)
+}
+}
+#if its the dir, then increment the users dir count
+else if ($1 ~ /^d/)
+{
+countDirectories[$3] = countDirectories[$3] + 1
+}
+#if its the others, then increment the users others count
+else
+{
+userOthers[$3] = userOthers[$3] + 1
+}
+
+
+}
+
+END {
+totalFiles = 0;
+totalHidFiles = 0;
+totalDirs = 0;
+totalOthers = 0;
+totalStorage = 0;
+
+#print the file data with the format
+for(i=0; i<numUsers; i++)
+{
+name=userN[i]
+printf("user: %s\n", name)
+
+if (countAllFiles[name] || countHidFiles[name])
+{
+printf("files: \n All / Hidden : (%d/%d)\n", countAllFiles[name], countHidFiles[name])
+totalFiles=totalFiles+countAllFiles[name]
+totalHidFiles=totalHidFiles+countHidFiles[name]
+}
+
+if(countDirectories[name])
+{
+printf("Directories: %d\n", countDirectories[name])
+totalDirs=totalDirs+countDirectories[name]
+}
+
+if(countStorage[name])
+{
+printf("Storage (Bytes): %d B\n", countStorage[name])
+totalStorage=totalStorage+countStorage[name]
+}
+
+if(userOthers[name])
+{
+printf("Other: %d\n", userOthers[name])
+totalOthers=totalOthers+userOthers[name]
+}
+}
+
+printf("\n Oldest file: %s\n", old);
+printf("Newest file: %s\n", new);
+
+printf("total Users : %d\n", numUsers);
+printf("total Files\n");
+printf("All / Hidden : ( %d / %d)\n", totalFiles, totalHidFiles);
+printf("Total Directoriess : %d\n", totalDirs);
+printf("Total Other : %d\n", totalOthers);
+printf("Total Storage : %d B\n", totalStorage);
+
+}
+'
